@@ -90,6 +90,22 @@ def validate_config(config: Any) -> dict[str, Any]:
     precipitation_variable = _string(gfs, "precipitation_variable", "gfs")
     precipitation_aliases = _string_list(gfs, "precipitation_variable_aliases", "gfs")
 
+    apcp_sequence = _mapping(config, "apcp_sequence")
+    forecast_hours = apcp_sequence.get("forecast_hours")
+    if (
+        not isinstance(forecast_hours, list)
+        or not forecast_hours
+        or any(isinstance(hour, bool) or not isinstance(hour, int) for hour in forecast_hours)
+    ):
+        raise ConfigError("apcp_sequence.forecast_hours must be a non-empty list of integers.")
+    if forecast_hours != sorted(set(forecast_hours)):
+        raise ConfigError("apcp_sequence.forecast_hours must be sorted and unique.")
+    if any(hour < 0 or hour > 384 for hour in forecast_hours):
+        raise ConfigError("apcp_sequence.forecast_hours must be between 0 and 384.")
+    sequence_variable = _string(apcp_sequence, "variable", "apcp_sequence")
+    _string(apcp_sequence, "level", "apcp_sequence")
+    _string(apcp_sequence, "report_path", "apcp_sequence")
+
     verification = _mapping(config, "verification")
     window_start = _integer(verification, "rainfall_window_start_utc", "verification")
     window_hours = _integer(verification, "rainfall_window_hours", "verification")
@@ -106,6 +122,8 @@ def validate_config(config: Any) -> dict[str, Any]:
     surface_variables = _string_list(variables, "surface", "variables")
     if precipitation_variable not in surface_variables:
         raise ConfigError("gfs.precipitation_variable must also appear in variables.surface.")
+    if sequence_variable not in surface_variables:
+        raise ConfigError("apcp_sequence.variable must also appear in variables.surface.")
     if precipitation_variable not in precipitation_aliases:
         raise ConfigError("gfs.precipitation_variable must appear in gfs.precipitation_variable_aliases.")
     pressure = _mapping(variables, "pressure", "variables")
@@ -126,12 +144,31 @@ def validate_config(config: Any) -> dict[str, Any]:
     rh_min = _number(quality, "rh_min", "quality")
     rh_max = _number(quality, "rh_max", "quality")
     valid_fraction = _number(quality, "min_valid_grid_fraction", "quality")
+    negative_tolerance = _number(quality, "negative_rainfall_tolerance_mm", "quality")
+    monotonicity_tolerance = _number(
+        quality, "cumulative_monotonicity_tolerance_mm", "quality"
+    )
+    qa_thresholds = quality.get("qa_close_thresholds_mm")
     if rainfall_min > rainfall_max:
         raise ConfigError("quality.rainfall_min_mm must not exceed rainfall_max_reasonable_mm.")
     if not 0 <= rh_min <= rh_max <= 100:
         raise ConfigError("quality RH bounds must satisfy 0 <= rh_min <= rh_max <= 100.")
     if not 0 < valid_fraction <= 1:
         raise ConfigError("quality.min_valid_grid_fraction must be in the interval (0, 1].")
+    if negative_tolerance < 0 or monotonicity_tolerance < 0:
+        raise ConfigError("quality rainfall tolerances must be zero or greater.")
+    if (
+        not isinstance(qa_thresholds, list)
+        or len(qa_thresholds) != 2
+        or any(
+            isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0
+            for value in qa_thresholds
+        )
+        or qa_thresholds != sorted(qa_thresholds)
+    ):
+        raise ConfigError(
+            "quality.qa_close_thresholds_mm must contain two increasing positive numbers."
+        )
 
     paths = _mapping(config, "paths")
     for key in (
