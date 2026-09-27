@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local environment files
+.env
+.env.*
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Large meteorological data and intermediates
+data/raw/**/*.grib
+data/raw/**/*.grb
+data/raw/**/*.grib2
+data/raw/**/*.grb2
+data/raw/**/*.idx
+data/raw/**/*.nc
+data/raw/**/*.nc4
+data/raw/**/*.h5
+data/raw/**/*.hdf
+data/raw/**/*.tif
+data/raw/**/*.tiff
+data/processed/**/*.nc
+data/processed/**/*.nc4
+data/processed/**/*.zarr/
+data/processed/**/*.parquet
+data/manifests/*.json
+data/manifests/*.csv
+
+# Generated reports and maps
+reports/smoke_test/*
+!reports/smoke_test/.gitkeep
+reports/**/*.png
+reports/**/*.jpg
+reports/**/*.jpeg
+reports/**/*.html
+reports/**/*.pdf
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

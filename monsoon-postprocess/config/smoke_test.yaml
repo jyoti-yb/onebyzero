@@ -1,0 +1,96 @@
+project:
+  name: monsoon-postprocess
+  python: "3.11"
+
+smoke_test:
+  description: "Seven-day local-data smoke test for monsoon rainfall forecast post-processing."
+  start_date: null
+  end_date: null
+  expected_days: 7
+
+domain:
+  south: 6.5
+  north: 38.5
+  west: 66.5
+  east: 100.0
+
+gfs:
+  cycle: "00"
+  model: "gfs_0p25"
+  lead_day: 1
+  local_file_glob: "*.grib*"
+  precipitation_variable: APCP
+  precipitation_variable_aliases:
+    - APCP
+    - tp
+
+verification:
+  rainfall_window_start_utc: 3
+  rainfall_window_hours: 24
+  metrics:
+    - bias
+    - mae
+    - rmse
+    - correlation
+
+variables:
+  surface:
+    - APCP
+    - PRMSL
+    - PWAT
+    - CAPE
+  pressure:
+    850:
+      - UGRD
+      - VGRD
+      - RH
+      - HGT
+    700:
+      - UGRD
+      - VGRD
+      - RH
+      - HGT
+    500:
+      - UGRD
+      - VGRD
+      - RH
+      - HGT
+    200:
+      - UGRD
+      - VGRD
+      - HGT
+
+quality:
+  rainfall_min_mm: 0
+  rainfall_max_reasonable_mm: 1000
+  rh_min: 0
+  rh_max: 100
+  min_valid_grid_fraction: 0.90
+
+paths:
+  raw_gfs_dir: data/raw/gfs
+  raw_imd_dir: data/raw/imd
+  processed_gfs_dir: data/processed/gfs
+  processed_imd_dir: data/processed/imd
+  paired_dir: data/processed/paired
+  manifest_dir: data/manifests
+  report_dir: reports/smoke_test
+
+observation:
+  provider: imd
+  local_file_glob: "*"
+  precipitation_variable_candidates:
+    - rainfall
+    - precip
+    - precipitation
+    - rain
+
+alignment:
+  time_tolerance_hours: 3
+  regrid_method: nearest
+  latitude_names:
+    - lat
+    - latitude
+  longitude_names:
+    - lon
+    - longitude
