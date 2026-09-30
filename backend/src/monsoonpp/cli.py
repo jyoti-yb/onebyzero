@@ -12,6 +12,8 @@
   monsoonpp phase-c -c configs/phase_c_2024w29_imerg.yaml
   monsoonpp phase-c2 -c configs/phase_c2_202407_imerg.yaml
   monsoonpp phase-c3 -c configs/phase_c3_2024jjas_imerg.yaml
+  monsoonpp export-demo -c CONFIG --bundle dist/demo-bundle
+  monsoonpp serve --bundle dist/demo-bundle --port 8000
 """
 from __future__ import annotations
 
@@ -25,13 +27,16 @@ import time
 def main(argv=None):
     ap = argparse.ArgumentParser("monsoonpp")
     ap.add_argument("cmd", choices=["build", "train", "evaluate", "forecast", "all", "serve", "inspect-obs",
-                                    "smoke", "validate-phase-b", "phase-c", "phase-c2", "phase-c3"])
+                                    "smoke", "validate-phase-b", "phase-c", "phase-c2", "phase-c3",
+                                    "export-demo"])
     ap.add_argument("path", nargs="?", help="file for inspect-obs")
     ap.add_argument("--out", help="output directory for inspect-obs reports")
     ap.add_argument("-c", "--config", default=None)
     ap.add_argument("--date")
     ap.add_argument("--lead", type=int, default=1)
     ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--host", default="0.0.0.0")
+    ap.add_argument("--bundle", help="self-contained serving bundle directory")
     ap.add_argument("-v", "--verbose", action="store_true")
     a = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO if a.verbose or a.cmd in ("train", "all") else logging.WARNING,
@@ -48,7 +53,24 @@ def main(argv=None):
         print("\n".join(rep["_written"]))
         return
 
+    if a.cmd == "serve":
+        import os
+        import uvicorn
+        from .api.app import create_app
+        from .serving.bundle import BundleError
+        bundle = a.bundle or os.environ.get("MONSOONPP_BUNDLE")
+        if not bundle:
+            sys.exit("serve requires --bundle PATH or MONSOONPP_BUNDLE; rebuild configs are not accepted")
+        try:
+            app = create_app(bundle)
+        except BundleError as exc:
+            sys.exit(f"serve startup failed: {exc}")
+        uvicorn.run(app, host=a.host, port=a.port)
+        return
+
     from .config import load_config
+    if not a.config:
+        sys.exit(f"{a.cmd} requires --config")
     cfg = load_config(a.config)
     t0 = time.time()
 
@@ -98,10 +120,13 @@ def main(argv=None):
         result = run_phase_c3(cfg)
         print(f"[phase-c3] {result['decision']}")
         print("\n".join(result["outputs"]))
-    if a.cmd == "serve":
-        import uvicorn
-        from .api.app import create_app
-        uvicorn.run(create_app(a.config), host="0.0.0.0", port=a.port)
+    if a.cmd == "export-demo":
+        from .export_demo import export_demo
+        if not a.bundle:
+            sys.exit("export-demo requires --bundle PATH")
+        result = export_demo(cfg, a.bundle)
+        print(f"[export-demo] bundle_id={result['bundle_id']} -> {result['bundle']}")
+        print("\n".join(result["files"]))
     print(f"done in {time.time() - t0:.0f}s")
 
 

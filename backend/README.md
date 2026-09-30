@@ -31,7 +31,8 @@ Outputs are a bias-corrected rainfall grid, heavy-rain probabilities, a district
 pip install -e ".[dev]"
 monsoonpp all -c configs/synthetic.yaml          # build → train → evaluate (~4 min, 2 cores)
 monsoonpp forecast -c configs/synthetic.yaml --date 2024-07-20 --lead 1
-monsoonpp serve -c configs/synthetic.yaml --port 8000   # http://localhost:8000/docs
+monsoonpp export-demo -c configs/phase_c2_202407_imerg.yaml --bundle dist/demo-bundle
+monsoonpp serve --bundle dist/demo-bundle --port 8000   # http://localhost:8000/docs
 pytest -q                                        # 13 tests, ~40 s
 ```
 
@@ -78,6 +79,37 @@ Check before trusting any number:
 - Low/depression outputs are explicitly NWP proxies, local forcing outputs are heuristic scores, and WD support is disabled unless a validated upper-level anomaly climatology and upstream track are supplied.
 - Atlas rows preserve independent day counts, space-time cell counts, event counts, Bias/MAE/RMSE, POD/FAR/CSI/ETS, FSS, and low-sample warnings.
 
+## Production/demo bundle
+
+Serving is intentionally separate from rebuilding. `export-demo` reads an existing completed
+run and writes a compact, checksummed bundle containing only precomputed status, latest-cycle,
+regime, and verification payloads. It does not copy raw GFS, IMERG, IMD, or ETOPO files.
+
+```bash
+monsoonpp export-demo -c configs/phase_c3_2024jjas_imerg.yaml --bundle dist/demo-bundle
+monsoonpp serve --bundle dist/demo-bundle --host 0.0.0.0 --port 8000
+```
+
+The server validates every required file and SHA-256 checksum before startup. It does not load a
+run config, model, NetCDF dataset, source adapter, or downloader. Available routes are:
+
+- `GET /health`
+- `GET /api/v1/status`
+- `GET /api/v1/cycles/latest`
+- `GET /api/v1/regimes/latest`
+- `GET /api/v1/verification/latest`
+
+Build a self-contained image after exporting the bundle:
+
+```bash
+docker build --build-arg BUNDLE_DIR=dist/demo-bundle -t monsoonpp-demo .
+docker run --rm -p 8000:8000 monsoonpp-demo
+```
+
+The image installs only `requirements-runtime.lock`; its build context excludes historical data,
+reports, caches, and GRIB/HDF5 files. Missing or modified bundle files fail image build and server
+startup explicitly.
+
 ## Grids (see `grid.py`)
 - **Canonical IMD grid:** 0.25°, 6.5–38.5°N × 66.5–100.0°E, 129 lat × 135 lon. It is the `GridConfig` default and is used by `gfs_imd_era5.yaml` and `ncum.yaml`. Only this grid is "the IMD grid".
 - **Verification / land mask:** the `land` static variable. On real runs it comes from IMD's valid cells. Ocean and no-data cells stay in the grid and are masked, never cropped away.
@@ -87,13 +119,11 @@ Check before trusting any number:
 
 | Endpoint | Returns |
 |---|---|
-| `GET /forecast/grid?date&lead&model` | corrected + raw grid, P(>64.5), P(>115.6), regime map |
-| `GET /forecast/districts?date&lead&warning=` | district table: mean/max rain, IMD category, probabilities, warning colour |
-| `GET /forecast/point?lat&lon&date&lead` | all ladder levels, probabilities, drivers, 20 analogues, confidence |
-| `GET /regimes?date&lead` | monsoon state, detected lows/depressions, regime shares |
-| `GET /verification?section=` | headline / overall / categorical / fss / prob / by_regime / by_region / atlas / drift |
-| `GET /atlas?lead&regime` | Regime × Error Atlas rows |
-| `GET /model-card`, `/available`, `/health` | registry metadata |
+| `GET /health` | bundle/schema health and runtime-network status |
+| `GET /api/v1/status` | source-run provenance, capability gates, proxy/truth role |
+| `GET /api/v1/cycles/latest` | latest precomputed forecast cycle and grid product |
+| `GET /api/v1/regimes/latest` | latest precomputed objective proxy and local-forcing fields |
+| `GET /api/v1/verification/latest` | latest validation summary and Error Atlas subset |
 
 ## Layout
 
@@ -106,12 +136,14 @@ src/monsoonpp/
   features.py
   models/     baselines (L0–L2) · gbm (L3–L5, MoE) · restore (L6) · probability (heads)
   verify/     metrics (POD/FAR/CSI/ETS/FSS/Brier) · report · atlas (+drift/PSI)
-  products/   district · explain · service
-  api/app.py  cli.py  pipeline.py
+  products/   district · explain · offline service used during export
+  serving/    checksummed bundle reader/writer (standard library only)
+  export_demo.py  api/app.py  cli.py  pipeline.py
 ```
 
 ## Design rules enforced in code
-- Predictors come **only** from the forecast and static fields. Obs and analysis are used only as targets and labels. There is a test for this, and a parity test proves the serving path (obs stripped) reproduces the offline predictions.
+- Predictors come **only** from the forecast and static fields. Obs and analysis are used only as targets and labels. There is a test for this, and a parity test proves the offline forecast product matches trained outputs before export.
+- Deployment serves immutable precomputed payloads only. It cannot import adapters, open rebuild configs, or download NOAA/NASA data.
 - Splits are **year-blocked**: train 2021–22, val 2023, test 2024. Regime-classifier probabilities for training rows are cross-fitted by year.
 - Every level must beat the one below it on the test year, or it doesn't earn its place.
 - `nwp_model_version` is stored in the model card. The drift check (PSI + per-regime bias shift) flags when to retrain.

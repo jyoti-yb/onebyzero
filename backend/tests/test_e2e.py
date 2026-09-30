@@ -53,23 +53,17 @@ def test_operational_path_matches_offline(trained):
 def test_api(trained):
     from fastapi.testclient import TestClient
     from monsoonpp.api import app as appmod
+    from monsoonpp.export_demo import export_demo
     cfg, _ = trained
-    import yaml, json
-    p = cfg.run_dir / "cfg.yaml"
-    d = cfg.to_dict()
-    p.write_text(yaml.safe_dump(json.loads(json.dumps(d, default=str))))
-    client = TestClient(appmod.create_app(str(p)))
-    assert client.get("/health").json()["models_ready"]
-    av = client.get("/available").json()
-    date = av["last_date"]
-    g = client.get("/forecast/grid", params={"date": date, "lead": 1}).json()
+    bundle = cfg.run_dir / "demo-bundle"
+    export_demo(cfg, bundle)
+    client = TestClient(appmod.create_app(bundle))
+    health = client.get("/health").json()
+    assert health["status"] == "ok" and not health["network_required"]
+    status = client.get("/api/v1/status").json()
+    assert status["bundle_mode"] == "trained_demo" and not status["raw_data_in_bundle"]
+    g = client.get("/api/v1/cycles/latest").json()
     assert len(g["rain"]) == len(g["lat"])
-    dd = client.get("/forecast/districts", params={"date": date, "lead": 1}).json()
-    assert dd["n"] > 0 and {"district", "warning", "p_heavy_max"} <= set(dd["districts"][0])
-    pt = client.get("/forecast/point", params={"lat": 19.0, "lon": 74.0, "date": date, "lead": 1})
-    assert pt.status_code == 200 and "explanation" in pt.json()
-    assert pt.json()["explanation"]["confidence"] in {"HIGH", "MEDIUM", "LOW"}
-    assert client.get("/regimes", params={"date": date, "lead": 1}).status_code == 200
-    assert client.get("/verification").status_code == 200
-    assert client.get("/atlas", params={"lead": 1}).json()["n"] > 0
-    assert client.get("/forecast/grid", params={"date": "1999-01-01", "lead": 1}).status_code == 404
+    assert client.get("/api/v1/regimes/latest").status_code == 200
+    verification = client.get("/api/v1/verification/latest").json()
+    assert verification["summary"]["atlas"]["table"]
