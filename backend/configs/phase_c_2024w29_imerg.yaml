@@ -1,0 +1,24 @@
+name: phase_c_2024w29_imerg
+forecast_source: gfs
+obs_source: imerg
+obs_time_convention: UNVERIFIED
+nwp_model_version: gfs-v16
+grid: {lat_min: 6.5, lat_max: 38.5, lon_min: 66.5, lon_max: 100.0, res: 0.25}
+thresholds: [2.5, 15.6, 64.5, 115.6, 204.5]
+fss_scales: [1, 3, 5, 9]
+adapter_options:
+  gfs_product: pgrb2.0p25
+  gfs_strict: true
+  static:
+    path: data/raw/static/etopo_2022_60s_india.nc
+    source_url: https://www.ngdc.noaa.gov/thredds/dodsC/global/ETOPO2022/60s/60s_bed_elev_netcdf/ETOPO_2022_v1_60s_N90W180_bed.nc
+    allow_download: false
+    land_fraction_threshold: 0.5
+phase_c:
+  paired_path: data/smoke_2024w29_imerg/reports/smoke/smoke_paired.nc
+  lead: 1
+  local_score_threshold: 0.5
+  min_group_cells: 1000
+  min_group_days: 30
+  min_events: 20
+  climatology_path: null

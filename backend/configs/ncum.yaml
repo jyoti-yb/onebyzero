@@ -1,0 +1,22 @@
+# Operational target: NCUM forecasts via the generic NetCDF adapter.
+# Only the adapter + varmap change; regimes, models, verification and API are identical.
+name: ncum_v1
+forecast_source: ncum
+obs_source: imd
+analysis_source: era5
+# IMD date-label convention is NOT verified. UNVERIFIED blocks pairing, training samples,
+# training and verification. After confirming from the official IMD product documentation
+# which 24 h period a date label covers, set ENDING_03Z (D-1 03Z -> D 03Z) or
+# STARTING_03Z (D 03Z -> D+1 03Z). Do not infer it from filenames, years or GFS timing.
+obs_time_convention: UNVERIFIED
+nwp_model_version: ncum-g-TBD
+years: [2021, 2022, 2023, 2024]
+leads: [1, 2, 3, 4, 5]
+# Canonical IMD 0.25 deg grid (129 lat x 135 lon); non-India cells excluded by the IMD land mask.
+grid: {lat_min: 6.5, lat_max: 38.5, lon_min: 66.5, lon_max: 100.0, res: 0.25}
+split: {train_years: [2021, 2022], val_years: [2023], test_years: [2024]}
+adapter_options:
+  forecast_dir: data/raw/ncum
+  filename_pattern: "ncum_{init:%Y%m%d}00.nc"
+  # varmap:                          # override placeholder names after inspecting NCMRWF files
+  #   tp_accum: [precipitation_amount, 1.0, 0.0]

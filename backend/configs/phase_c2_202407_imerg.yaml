@@ -1,0 +1,39 @@
+name: phase_c2_202407_imerg
+forecast_source: gfs
+obs_source: imerg
+obs_time_convention: UNVERIFIED
+nwp_model_version: gfs-v16
+grid: {lat_min: 6.5, lat_max: 38.5, lon_min: 66.5, lon_max: 100.0, res: 0.25}
+thresholds: [2.5, 15.6, 64.5, 115.6, 204.5]
+fss_scales: [1, 3, 5, 9]
+adapter_options:
+  gfs_product: pgrb2.0p25
+  gfs_strict: true
+  gfs_priority: [google, aws]
+  static:
+    path: data/raw/static/etopo_2022_60s_india.nc
+    source_url: https://www.ngdc.noaa.gov/thredds/dodsC/global/ETOPO2022/60s/60s_bed_elev_netcdf/ETOPO_2022_v1_60s_N90W180_bed.nc
+    allow_download: false
+    land_fraction_threshold: 0.5
+phase_c:
+  paired_path: data/smoke_202407_imerg/reports/smoke/smoke_paired.nc
+  out_dir: data/phase_c2_202407_imerg/reports/phase_c
+  atmosphere_profile: regime_required
+  lead: 1
+  local_score_threshold: 0.5
+  min_group_cells: 5000
+  min_group_days: 10
+  min_events: 50
+  climatology_path: null
+phase_c2:
+  out_dir: data/phase_c2_202407_imerg/reports/phase_c2
+  bootstrap_replicates: 2000
+  bootstrap_seed: 42
+  confidence: 0.95
+  min_comparison_days: 10
+  min_comparison_cells: 5000
+  material_hedges_g: 0.2
+  material_mae_mm: 1.0
+  max_cliffs_cells: 100000
+  min_ml_days: 90
+  min_ml_months: 3

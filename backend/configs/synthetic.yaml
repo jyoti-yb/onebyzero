@@ -1,0 +1,18 @@
+# Offline development / CI run. Physically structured synthetic world with known,
+# regime-dependent NWP errors. Validates the pipeline; says nothing about real skill.
+name: synthetic
+forecast_source: synthetic
+obs_source: synthetic
+analysis_source: synthetic
+# Explicit and valid ONLY for the synthetic world, where obs label D and forecast label D
+# are generated for the same window (03Z D -> 03Z D+1) by construction.
+# This says nothing about IMD.
+obs_time_convention: STARTING_03Z
+nwp_model_version: synthetic-v1
+years: [2021, 2022, 2023, 2024]
+leads: [1, 3]
+# NOT the IMD grid: a cropped (6.5-37.5 N, 66.5-97.5 E) and coarsened (0.5 deg) development
+# domain, 63 x 63, kept small for fast offline runs. grid_role() reports it as 'non_imd'.
+# Real-data configs use the canonical IMD 0.25 deg grid (6.5-38.5 N, 66.5-100.0 E, 129 x 135).
+grid: {lat_min: 6.5, lat_max: 37.5, lon_min: 66.5, lon_max: 97.5, res: 0.5}
+split: {train_years: [2021, 2022], val_years: [2023], test_years: [2024]}

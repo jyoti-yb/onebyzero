@@ -1,0 +1,33 @@
+# SIH development run on public data: GFS (proxy for NCUM) + IMD rainfall + ERA5 regimes.
+# Needs: pip install -e ".[real]"  and a ~/.cdsapirc CDS key.
+# Disk: GFS 0.25 deg GRIB for 4 JJAS x 2 leads is large; Herbie subsets by byte-range
+# (only the requested fields are downloaded), expect a few GB in data/raw/gfs.
+name: gfs_imd_v1
+forecast_source: gfs
+obs_source: imd
+analysis_source: era5
+# IMD date-label convention is NOT verified. UNVERIFIED blocks pairing, training samples,
+# training and verification. After confirming from the official IMD product documentation
+# which 24 h period a date label covers, set ENDING_03Z (D-1 03Z -> D 03Z) or
+# STARTING_03Z (D 03Z -> D+1 03Z). Do not infer it from filenames, years or GFS timing.
+obs_time_convention: UNVERIFIED
+nwp_model_version: gfs-v16          # record the NWP cycle; retrain on upgrades
+years: [2021, 2022, 2023, 2024]
+leads: [1, 3]
+# Canonical IMD 0.25 deg rectangular grid: 6.5-38.5 N, 66.5-100.0 E -> 129 lat x 135 lon.
+# Ocean / no-data cells stay in the grid and are excluded by the IMD-derived land mask.
+# To run on a cropped runtime domain instead, keep res 0.25 and bounds on the 0.25 lattice
+# inside this rectangle (enforced by grid.check_imd_compatible); that is a crop, not the IMD grid.
+grid: {lat_min: 6.5, lat_max: 38.5, lon_min: 66.5, lon_max: 100.0, res: 0.25}
+split: {train_years: [2021, 2022], val_years: [2023], test_years: [2024]}
+model: {max_train_rows: 1500000}
+district_geojson: null              # set to a district GeoJSON for real district products
+adapter_options:
+  gfs_product: pgrb2.0p25
+  gfs_strict: true
+  static:
+    path: data/raw/static/etopo_2022_60s_india.nc
+    source_url: https://www.ngdc.noaa.gov/thredds/dodsC/global/ETOPO2022/60s/60s_bed_elev_netcdf/ETOPO_2022_v1_60s_N90W180_bed.nc
+    allow_download: true
+    margin_degrees: 1.0
+    land_fraction_threshold: 0.5

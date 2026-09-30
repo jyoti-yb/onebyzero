@@ -1,0 +1,25 @@
+# Full JJAS 2024 real-data pairing: GFS 00Z D+1 versus NASA GPM IMERG Final V07 proxy.
+name: smoke_2024jjas_imerg
+forecast_source: gfs
+obs_source: imerg
+obs_time_convention: UNVERIFIED
+nwp_model_version: gfs-v16
+grid: {lat_min: 6.5, lat_max: 38.5, lon_min: 66.5, lon_max: 100.0, res: 0.25}
+adapter_options:
+  gfs_product: pgrb2.0p25
+  gfs_strict: true
+  gfs_priority: [google, aws]
+  obs:
+    files:
+      - "data/raw/imerg/3B-HHR.MS.MRG.3IMERG.202406*.HDF5"
+      - "data/raw/imerg/3B-HHR.MS.MRG.3IMERG.202407*.HDF5"
+      - "data/raw/imerg/3B-HHR.MS.MRG.3IMERG.202408*.HDF5"
+      - "data/raw/imerg/3B-HHR.MS.MRG.3IMERG.202409*.HDF5"
+      - "data/raw/imerg/3B-HHR.MS.MRG.3IMERG.20241001*.HDF5"
+    origin: "NASA GES DISC GPM_3IMERGHH v07 Final; proxy-based exploration, not IMD truth"
+smoke:
+  start: 2024-06-01
+  end: 2024-09-30
+  lead: 1
+  mask: india_outline
+  min_coverage: 1.0

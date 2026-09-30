@@ -1,0 +1,21 @@
+name: phase_b_20240715_gfs_etopo
+forecast_source: gfs
+obs_source: synthetic
+analysis_source: synthetic
+obs_time_convention: STARTING_03Z
+nwp_model_version: gfs-v16
+years: [2024]
+leads: [1]
+grid: {lat_min: 6.5, lat_max: 38.5, lon_min: 66.5, lon_max: 100.0, res: 0.25}
+adapter_options:
+  gfs_product: pgrb2.0p25
+  gfs_strict: true
+  static:
+    path: data/raw/static/etopo_2022_60s_india.nc
+    source_url: https://www.ngdc.noaa.gov/thredds/dodsC/global/ETOPO2022/60s/60s_bed_elev_netcdf/ETOPO_2022_v1_60s_N90W180_bed.nc
+    allow_download: true
+    margin_degrees: 1.0
+    land_fraction_threshold: 0.5
+phase_b:
+  date: "2024-07-15"
+  lead: 1

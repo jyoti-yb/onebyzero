@@ -1,0 +1,18 @@
+# Seven-day real-data smoke test: GFS 00Z D+1 vs IMD 0.25 deg gauge rainfall (FINAL_TRUTH).
+# BLOCKED until obs_time_convention is verified from official IMD documentation.
+# For the merged product use obs_source: imd_ncmrwf_merged (OFFICIAL_ALTERNATIVE).
+name: smoke_2024w29_imd
+forecast_source: gfs
+obs_source: imd_netcdf
+obs_time_convention: UNVERIFIED     # set ENDING_03Z or STARTING_03Z only with documented evidence
+grid: {lat_min: 6.5, lat_max: 38.5, lon_min: 66.5, lon_max: 100.0, res: 0.25}
+adapter_options:
+  gfs_product: pgrb2.0p25
+  obs:
+    files: ["data/raw/imd/RF25_ind2024_rfp25.nc"]
+    origin: "IMD Pune CRS archive (fill in exact URL / download date)"
+smoke:
+  start: "2024-07-15"
+  end: "2024-07-21"
+  lead: 1
+  mask: obs_valid
